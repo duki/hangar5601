@@ -56,10 +56,17 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
         return (ambient + diffuse + specular);
 }
 
+float near = 5.0f;
+float far = 10.0f;
+
+float linearizeDepth(float depth) {
+    return (2.0 * far * near) / (far + near - (depth * 2.0 - 1.0) * (far - near));
+}
+
 void main()
 {
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPosition - FragPos);
     vec3 result = CalcPointLight(pointLight, normal, FragPos, viewDir);
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, 1.0); //* vec4(vec3(1.0) - vec3(linearizeDepth(gl_FragCoord.z) / far), 1.0f);
 }
