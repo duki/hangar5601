@@ -101,6 +101,42 @@ ProgramState *programState;
 
 void DrawImGui(ProgramState *programState);
 
+float skyboxVertices[] =
+{
+	//   Coordinates
+	-1.0f, -1.0f,  1.0f, // 1        
+	 1.0f, -1.0f,  1.0f, // 2     
+	 1.0f, -1.0f, -1.0f, // 3     
+	-1.0f, -1.0f, -1.0f, // 4     
+	-1.0f,  1.0f,  1.0f, // 5     
+	 1.0f,  1.0f,  1.0f, // 6     
+	 1.0f,  1.0f, -1.0f, // 7     
+	-1.0f,  1.0f, -1.0f  // 8
+};
+
+unsigned int skyboxIndices[] =
+{
+	// R
+	1, 2, 5,
+	5, 2, 6,
+	// L
+	0, 4, 7,
+	7, 3, 0,
+	// T
+	4, 5, 6,
+	6, 7, 4,
+	// B
+	0, 3, 2,
+	2, 1, 0,
+	// BA
+	0, 1, 5,
+	5, 4, 0,
+	// F
+	3, 7, 6,
+	6, 2, 3
+};
+
+
 int main() {
     // glfw: initialize and configure
     // ------------------------------
@@ -156,42 +192,133 @@ int main() {
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
     // configure global opengl state
+
+    // Face culling
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    glFrontFace(GL_CCW);
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
-
+    Shader outlineShader("resources/shaders/outlining.vs", "resources/shaders/outlining.fs");
+    Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     // load models
     // -----------
     Model ourModel("resources/objects/space_station/Space\ Station\ Scene.obj");
+    Model freighterModel("resources/objects/freighter/freighter.obj");
+
+    freighterModel.SetShaderTextureNamePrefix("material.");
     ourModel.SetShaderTextureNamePrefix("material.");
 
+    skyboxShader.use();
+    skyboxShader.setInt("skybox", 0);
+
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.position = glm::vec3(0.0f, 800.0, 0.0);
+    pointLight.ambient = glm::vec3(0.4, 0.4, 0.4);
+    pointLight.diffuse = glm::vec3(200.0, 200.0, 200.0);
+    pointLight.specular = glm::vec3(50.0, 50.0, 50.0);
 
-    pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    // pointLight.constant = 0.03f;
+    // pointLight.linear = 0.07f;
+    // pointLight.quadratic = 0.00003f;
 
+    pointLight.constant = 0.505f;
+    pointLight.linear = 0.575f;
+    pointLight.quadratic = 0.0000003f;
 
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+    glfwSwapInterval(0);
+    unsigned int fpsCounter = 0;
     // render loop
     // -----------
+
+	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glGenBuffers(1, &skyboxEBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	std::string facesCubemap[6] =
+	{		
+        "resources/textures/right.png",
+        "resources/textures/left.png",
+        "resources/textures/top.png",
+        "resources/textures/bottom.png",
+        "resources/textures/front.png",
+        "resources/textures/back.png",
+    };
+
+
+    	unsigned int cubemapTexture;
+	glGenTextures(1, &cubemapTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+	for (unsigned int i = 0; i < 6; i++) {
+		int width, height, nrChannels;
+		unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+		{
+			stbi_set_flip_vertically_on_load(false);
+			glTexImage2D
+			(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0,
+				GL_RGBA,
+				width,
+				height,
+				0,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Failed to load texture: " << facesCubemap[i] << std::endl;
+			stbi_image_free(data);
+		}
+	}
+
+
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        float progTime = glfwGetTime();
+        deltaTime = progTime - lastFrame;
+        // lastFrame = progTime;
+        fpsCounter++;
 
+        if (deltaTime >= 1.0/30.0) {
+            std::string fpsString = std::to_string(round((1.0 / deltaTime) *fpsCounter));
+            std::string milString = std::to_string(round((deltaTime / fpsCounter) * 1000));
+            std::string newTitle = "hangar5601 [" + fpsString + "]fps / [" + milString + "]ms";
+            glfwSetWindowTitle(window, newTitle.c_str()); 
+            lastFrame = progTime;
+            fpsCounter = 0;
+        }
         // input
         // -----
         processInput(window);
@@ -200,11 +327,14 @@ int main() {
         // render
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+
+
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+        pointLight.position = glm::vec3(30.0 * cos(progTime), 10.0f, 30.0 * sin(progTime));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -216,7 +346,7 @@ int main() {
         ourShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 1000.0f);
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
@@ -227,12 +357,66 @@ int main() {
                                programState->backpackPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
+        
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+        
         ourModel.Draw(ourShader);
+        
+        // rotation and translation for freigther
+        float rotationAngle = glm::radians(sin(progTime) * 180);
+        glm::vec3 rotationAxis = glm::vec3(1.0f, 1.0f, 1.0f);
+        glm::mat4 freighterRot = glm::rotate(model, rotationAngle, rotationAxis);
+        freighterRot = glm::translate(model, glm::vec3(cos(progTime / 4) * 500.0, 0.0f, sin(progTime / 4) * 500.0));
+
+        
+        ourShader.setMat4("model", freighterRot);
+        freighterModel.Draw(ourShader);
+        
+        ourShader.setMat4("model", model);
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+
+        // starting to use the outline shader
+        outlineShader.use();
+        outlineShader.setMat4("projection", projection);
+        outlineShader.setMat4("view", view);
+        outlineShader.setMat4("model", freighterRot);
+        outlineShader.setFloat("outlining", 1.01f);
+        
+        freighterModel.Draw(outlineShader);
+
+        glStencilMask(0xff);
+        glStencilFunc(GL_ALWAYS, 0, 0xff);
+        glEnable(GL_DEPTH_TEST);
+
+ 
+
+
+        // SKYBOX
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader.use();
+        glm::mat4 skyboxView = glm::mat4(1.0f);
+		glm::mat4 skyProjection = glm::mat4(1.0f);
+        
+		skyboxView = glm::mat4(glm::mat3(glm::lookAt(programState->camera.Position, programState->camera.Position + programState->camera.Front, programState->camera.Up)));
+		skyProjection = glm::perspective(glm::radians(45.0f), (float) SCR_WIDTH / SCR_HEIGHT, 0.1f, 1000.0f);
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "skyView"), 1, GL_FALSE, glm::value_ptr(skyboxView));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "skyProjection"), 1, GL_FALSE, glm::value_ptr(skyProjection));
+
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+
+		
+		glDepthFunc(GL_LESS);
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
-
-
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
