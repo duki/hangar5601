@@ -210,20 +210,23 @@ int main() {
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     // build and compile shaders
     // -------------------------
-    Shader ourShader("resources/shaders/grass.vs", "resources/shaders/grass.fs");
+    Shader planeShader("resources/shaders/grass.vs", "resources/shaders/grass.fs");
     Shader stationShader("resources/shaders/station.vs", "resources/shaders/station.fs");
     Shader outlineShader("resources/shaders/outlining.vs", "resources/shaders/outlining.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader treeShader("resources/shaders/trees.vs", "resources/shaders/trees.fs");
     // load models
     // -----------
     // Model ourModel("resources/objects/space_station/Space\ Station\ Scene.obj");
     Model ourModel("resources/objects/grass/grass.obj");
     Model stationModel("resources/objects/space_station/Space\ Station\ Scene.obj");
     Model freighterModel("resources/objects/freighter/freighter.obj");
+    Model treeModel("resources/objects/trees/trees9.obj");
 
     freighterModel.SetShaderTextureNamePrefix("material.");
     ourModel.SetShaderTextureNamePrefix("material.");
     stationModel.SetShaderTextureNamePrefix("material.");
+    treeModel.SetShaderTextureNamePrefix("material.");
     
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
@@ -314,7 +317,6 @@ int main() {
 	}
 
 
-    // grass plane
 
 
     // texture loading
@@ -366,18 +368,19 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // grassDrawing
-        ourShader.use();
+        planeShader.use();
         pointLight.position = glm::vec3(300.0 * cos(progTime), cos(progTime) * 100.0f, 300.0 * sin(progTime));
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        planeShader.setVec3("pointLight.position", pointLight.position);
+        planeShader.setVec3("pointLight.ambient", pointLight.ambient);
+        planeShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        planeShader.setVec3("pointLight.specular", pointLight.specular);
+        planeShader.setFloat("pointLight.constant", pointLight.constant);
+        planeShader.setFloat("pointLight.linear", pointLight.linear);
+        planeShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        planeShader.setVec3("viewPosition", programState->camera.Position);
+        planeShader.setFloat("material.shininess", 32.0f);
 
+        // stationDrawing
         stationShader.use();
         stationShader.setVec3("pointLight.position", pointLight.position);
         stationShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -387,16 +390,16 @@ int main() {
         stationShader.setFloat("pointLight.linear", pointLight.linear);
         stationShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         stationShader.setVec3("viewPosition", programState->camera.Position);
-        stationShader.setFloat("material.shininess", 32.0f);
+        stationShader.setFloat("material.shininess", 12.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         
-        ourShader.use();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-
+        planeShader.use();
+        planeShader.setMat4("projection", projection);
+        planeShader.setMat4("view", view);
+        stationShader.use();
         stationShader.setMat4("projection", projection);
         stationShader.setMat4("view", view);
         // render the loaded model
@@ -404,12 +407,12 @@ int main() {
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
         
+        planeShader.use();
+        planeShader.setMat4("model", model);
         
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
-
 
         float rotationAngle = glm::radians(sin(progTime) * (12) * cos(progTime));
         glm::vec3 rotationAxis = glm::vec3(0, 1, 0);
@@ -428,20 +431,39 @@ int main() {
         outlineShader.setFloat("outlining", 1.0);
         freighterModel.Draw(outlineShader);
         
-        ourShader.use();
-        ourModel.Draw(ourShader);
 
-        ourShader.setMat4("model", freighterRot);
-        freighterModel.Draw(ourShader);
+        planeShader.use();
+        ourModel.Draw(planeShader);
 
+        planeShader.setMat4("model", freighterRot);
+        freighterModel.Draw(planeShader);
+
+
+        treeShader.use();
+        treeShader.setVec3("pointLight.position", pointLight.position);
+        treeShader.setVec3("pointLight.ambient", pointLight.ambient);
+        treeShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        treeShader.setVec3("pointLight.specular", pointLight.specular);
+        treeShader.setFloat("pointLight.constant", pointLight.constant);
+        treeShader.setFloat("pointLight.linear", pointLight.linear);
+        treeShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        treeShader.setVec3("viewPosition", programState->camera.Position);
+        treeShader.setFloat("material.shininess", 32.0f);
+
+        treeShader.setMat4("projection", projection);
+        treeShader.setMat4("view", view);
+        glm::mat4 treeRot = glm::mat4(1.0f);
+        treeRot = glm::scale(treeRot, glm::vec3(programState->backpackScale/100));
+        // treeRot = glm::rotate(treeRot, rotationAngle, rotationAxis);
+        treeRot = glm::translate(treeRot, glm::vec3(20.0f, 0.0f, 80.2f));
+        treeShader.setMat4("model", treeRot);;
+        treeModel.Draw(treeShader);
         
         // rotation and translation for freigther
         // START OF STENCIL SHADER
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
-
- 
 
 
         glStencilMask(0xff);
@@ -450,12 +472,10 @@ int main() {
        // END OF STENCIL SHADER
 
         stationShader.use();
-        stationShader.use();
         stationShader.setMat4("projection", projection);
         stationShader.setMat4("view", view);
         stationShader.setMat4("model", glm::scale(model, glm::vec3(programState->backpackScale/1000000)));
         stationModel.Draw(stationShader);
-        // model = glm::scale(model, glm::vec3(programState->backpackScale));
         
         // SKYBOX
         glDepthFunc(GL_LEQUAL);
