@@ -27,8 +27,8 @@ void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1024;
+const unsigned int SCR_HEIGHT = 768;
 
 // camera
 
@@ -57,7 +57,7 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
     glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
+    float backpackScale = 1000.0f;
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
@@ -100,6 +100,13 @@ void ProgramState::LoadFromFile(std::string filename) {
 ProgramState *programState;
 
 void DrawImGui(ProgramState *programState);
+
+GLfloat planeVertices[] = {
+    -1000.0f, 0, -1000.0f,  0.0f, 0.0f,
+    -1000.0f, 0, 1000.0f,   0.0f, 1.0f,
+    1000.0f, 0, 1000.0f,    1.0f, 1.0f,
+    1000.0f, 0, -1000.0f,   1.0f, 0.0f
+};
 
 float skyboxVertices[] =
 {
@@ -203,24 +210,28 @@ int main() {
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     // build and compile shaders
     // -------------------------
-    Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
+    Shader ourShader("resources/shaders/grass.vs", "resources/shaders/grass.fs");
+    Shader stationShader("resources/shaders/station.vs", "resources/shaders/station.fs");
     Shader outlineShader("resources/shaders/outlining.vs", "resources/shaders/outlining.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     // load models
     // -----------
-    Model ourModel("resources/objects/space_station/Space\ Station\ Scene.obj");
+    // Model ourModel("resources/objects/space_station/Space\ Station\ Scene.obj");
+    Model ourModel("resources/objects/grass/grass.obj");
+    Model stationModel("resources/objects/space_station/Space\ Station\ Scene.obj");
     Model freighterModel("resources/objects/freighter/freighter.obj");
 
     freighterModel.SetShaderTextureNamePrefix("material.");
     ourModel.SetShaderTextureNamePrefix("material.");
-
+    stationModel.SetShaderTextureNamePrefix("material.");
+    
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0.0f, 800.0, 0.0);
+    pointLight.position = glm::vec3(0.0f, 0.0, 0.0);
     pointLight.ambient = glm::vec3(0.4, 0.4, 0.4);
-    pointLight.diffuse = glm::vec3(200.0, 200.0, 200.0);
+    pointLight.diffuse = glm::vec3(2000.0, 2000.0, 2000.0);
     pointLight.specular = glm::vec3(50.0, 50.0, 50.0);
 
     // pointLight.constant = 0.03f;
@@ -303,6 +314,31 @@ int main() {
 	}
 
 
+    // grass plane
+
+
+    // texture loading
+    int widthImg, heightImg, numColCh;
+    unsigned char* bytes = stbi_load("resources/textures/grass.jpg", &widthImg, &heightImg, &numColCh, 0);
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, widthImg, heightImg, 0, GL_RGB, GL_UNSIGNED_BYTE, bytes);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    
+    stbi_image_free(bytes);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+
+
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -329,12 +365,9 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-
-
-
-        // don't forget to enable shader before setting uniforms
+        // grassDrawing
         ourShader.use();
-        pointLight.position = glm::vec3(30.0 * cos(progTime), 10.0f, 30.0 * sin(progTime));
+        pointLight.position = glm::vec3(300.0 * cos(progTime), cos(progTime) * 100.0f, 300.0 * sin(progTime));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -344,13 +377,28 @@ int main() {
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
+
+        stationShader.use();
+        stationShader.setVec3("pointLight.position", pointLight.position);
+        stationShader.setVec3("pointLight.ambient", pointLight.ambient);
+        stationShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        stationShader.setVec3("pointLight.specular", pointLight.specular);
+        stationShader.setFloat("pointLight.constant", pointLight.constant);
+        stationShader.setFloat("pointLight.linear", pointLight.linear);
+        stationShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        stationShader.setVec3("viewPosition", programState->camera.Position);
+        stationShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
+        
+        ourShader.use();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        stationShader.setMat4("projection", projection);
+        stationShader.setMat4("view", view);
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
@@ -358,42 +406,57 @@ int main() {
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         
+        
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
-        
-        ourModel.Draw(ourShader);
-        
-        // rotation and translation for freigther
-        float rotationAngle = glm::radians(sin(progTime) * 180);
-        glm::vec3 rotationAxis = glm::vec3(1.0f, 1.0f, 1.0f);
-        glm::mat4 freighterRot = glm::rotate(model, rotationAngle, rotationAxis);
-        freighterRot = glm::translate(model, glm::vec3(cos(progTime / 4) * 500.0, 0.0f, sin(progTime / 4) * 500.0));
 
-        
-        ourShader.setMat4("model", freighterRot);
-        freighterModel.Draw(ourShader);
-        
-        ourShader.setMat4("model", model);
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
 
+        float rotationAngle = glm::radians(sin(progTime) * (12) * cos(progTime));
+        glm::vec3 rotationAxis = glm::vec3(0, 1, 0);
+        glm::mat4 freighterRot = glm::mat4(1.0);
+
+        freighterRot = glm::translate(freighterRot, programState->backpackPosition); // translate it down so it's at the center of the scene
+        freighterRot = glm::scale(freighterRot, glm::vec3(programState->backpackScale));  
+        freighterRot = glm::scale(freighterRot, glm::vec3(programState->backpackScale/100000));
+        freighterRot = glm::rotate(freighterRot, rotationAngle, rotationAxis);
+        freighterRot = glm::translate(freighterRot, glm::vec3(cos(progTime / 4) * 50.0, 10.0f, sin(progTime / 4) * 50.0));
         // starting to use the outline shader
         outlineShader.use();
         outlineShader.setMat4("projection", projection);
         outlineShader.setMat4("view", view);
         outlineShader.setMat4("model", freighterRot);
-        outlineShader.setFloat("outlining", 1.01f);
-        
+        outlineShader.setFloat("outlining", 1.0);
         freighterModel.Draw(outlineShader);
+        
+        ourShader.use();
+        ourModel.Draw(ourShader);
 
-        glStencilMask(0xff);
-        glStencilFunc(GL_ALWAYS, 0, 0xff);
-        glEnable(GL_DEPTH_TEST);
+        ourShader.setMat4("model", freighterRot);
+        freighterModel.Draw(ourShader);
+
+        
+        // rotation and translation for freigther
+        // START OF STENCIL SHADER
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
 
  
 
 
+        glStencilMask(0xff);
+        glStencilFunc(GL_ALWAYS, 0, 0xff);
+        glEnable(GL_DEPTH_TEST);
+       // END OF STENCIL SHADER
+
+        stationShader.use();
+        stationShader.use();
+        stationShader.setMat4("projection", projection);
+        stationShader.setMat4("view", view);
+        stationShader.setMat4("model", glm::scale(model, glm::vec3(programState->backpackScale/1000000)));
+        stationModel.Draw(stationShader);
+        // model = glm::scale(model, glm::vec3(programState->backpackScale));
+        
         // SKYBOX
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
@@ -410,9 +473,16 @@ int main() {
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
-
+        // END OF SKYBOX
 		
 		glDepthFunc(GL_LESS);
+
+
+        glEnable(GL_BLEND);
+
+
+
+        glDisable(GL_BLEND);
 
 
         if (programState->ImGuiEnabled)
@@ -423,6 +493,7 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    glDeleteTextures(1, &texture);
 
     programState->SaveToFile("resources/program_state.txt");
     delete programState;
@@ -497,7 +568,7 @@ void DrawImGui(ProgramState *programState) {
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
         ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.55, 0.1, 1000.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
