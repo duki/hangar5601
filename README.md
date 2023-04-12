@@ -12,10 +12,15 @@
 ## implementirano
 
 > depth testing
+
 > stencil buffer
+
 > face culling
+
 > blending (discard)
+
 > blinn-phong lighting
+
 > [+] Cubemap
 
 https://youtu.be/0ImfLyAytjI
