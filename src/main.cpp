@@ -200,7 +200,7 @@ int main() {
 
     // configure global opengl state
 
-    // Face culling
+  
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glFrontFace(GL_CCW);
@@ -208,6 +208,11 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+
     // build and compile shaders
     // -------------------------
     Shader planeShader("resources/shaders/grass.vs", "resources/shaders/grass.fs");
@@ -369,7 +374,7 @@ int main() {
 
         // grassDrawing
         planeShader.use();
-        pointLight.position = glm::vec3(300.0 * cos(progTime), cos(progTime) * 100.0f, 300.0 * sin(progTime));
+        pointLight.position = glm::vec3(300.0 * cos(progTime), cos(progTime) * 200.0f, 500.0 * sin(progTime));
         planeShader.setVec3("pointLight.position", pointLight.position);
         planeShader.setVec3("pointLight.ambient", pointLight.ambient);
         planeShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -437,8 +442,9 @@ int main() {
 
         planeShader.setMat4("model", freighterRot);
         freighterModel.Draw(planeShader);
-
-
+        
+        // enabling blending
+        glEnable(GL_BLEND);
         treeShader.use();
         treeShader.setVec3("pointLight.position", pointLight.position);
         treeShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -456,9 +462,12 @@ int main() {
         treeRot = glm::scale(treeRot, glm::vec3(programState->backpackScale/100));
         // treeRot = glm::rotate(treeRot, rotationAngle, rotationAxis);
         treeRot = glm::translate(treeRot, glm::vec3(20.0f, 0.0f, 80.2f));
-        treeShader.setMat4("model", treeRot);;
+        treeShader.setMat4("model", treeRot);
+
         treeModel.Draw(treeShader);
-        
+        glDisable(GL_BLEND);
+        // disabling blending
+
         // rotation and translation for freigther
         // START OF STENCIL SHADER
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
@@ -498,11 +507,7 @@ int main() {
 		glDepthFunc(GL_LESS);
 
 
-        glEnable(GL_BLEND);
-
-
-
-        glDisable(GL_BLEND);
+  
 
 
         if (programState->ImGuiEnabled)

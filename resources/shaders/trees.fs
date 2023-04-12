@@ -53,6 +53,11 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
         if (diff != 0.0f) {
             specular = vec3(0.0f);
         }
+
+
+        if(texture(material.texture_diffuse1, TexCoords).a < 0.01 )
+            discard;
+
         return (ambient + diffuse + specular);
 }
 
@@ -76,7 +81,7 @@ void main()
     vec3 result = CalcPointLight(pointLight, normal, FragPos, viewDir);
     float depth = logDepth(gl_FragCoord.z, 0.1f, 25.5f);
 
-    FragColor = vec4(result, 1.0f) * (1.0 - depth) + vec4(depth * vec4(vec3(0.0085, 0.0085, 0.0090), 1.0));
+    FragColor = vec4(result, 0.5f) * (1.0 - depth) + vec4(depth * vec4(vec3(0, 0, 0), 1.0));
     // FragColor = vec4(vec3(linerizeDepth(gl_FragCoord.z) / far), 1.0f);
     // FragColor = vec4(result, 1.0); //* vec4(vec3(1.0) - vec3(linearizeDepth(gl_FragCoord.z) / far), 1.0f);
 }
