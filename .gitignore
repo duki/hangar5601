@@ -5,6 +5,9 @@
 
 project_base
 
+### program state ###
+resources/program_state.txt
+
 ### bin ###
 bin/
 
