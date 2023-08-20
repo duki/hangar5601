@@ -374,7 +374,7 @@ int main() {
 
         // grassDrawing
         planeShader.use();
-        pointLight.position = glm::vec3(300.0 * cos(progTime), cos(progTime) * 200.0f, 500.0 * sin(progTime));
+        pointLight.position = glm::vec3(300.0 * cos(progTime), -abs(cos(progTime)) * 200.0f, 500.0 * sin(progTime));
         planeShader.setVec3("pointLight.position", pointLight.position);
         planeShader.setVec3("pointLight.ambient", pointLight.ambient);
         planeShader.setVec3("pointLight.diffuse", pointLight.diffuse);
