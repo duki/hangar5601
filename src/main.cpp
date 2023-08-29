@@ -144,7 +144,7 @@ unsigned int skyboxIndices[] =
 };
 
 
-int main() {
+auto main() -> int {
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -158,8 +158,8 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL) {
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    if (window == nullptr) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -174,7 +174,7 @@ int main() {
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
@@ -267,7 +267,7 @@ int main() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -398,7 +398,7 @@ int main() {
         stationShader.setFloat("material.shininess", 12.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100000.0f);
+                                                static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         
         planeShader.use();
@@ -493,14 +493,14 @@ int main() {
 		glm::mat4 skyProjection = glm::mat4(1.0f);
         
 		skyboxView = glm::mat4(glm::mat3(glm::lookAt(programState->camera.Position, programState->camera.Position + programState->camera.Front, programState->camera.Up)));
-		skyProjection = glm::perspective(glm::radians(45.0f), (float) SCR_WIDTH / SCR_HEIGHT, 0.1f, 1000.0f);
+		skyProjection = glm::perspective(glm::radians(45.0f), static_cast<float>(SCR_WIDTH) / SCR_HEIGHT, 0.1f, 1000.0f);
 		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "skyView"), 1, GL_FALSE, glm::value_ptr(skyboxView));
 		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "skyProjection"), 1, GL_FALSE, glm::value_ptr(skyProjection));
 
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
         // END OF SKYBOX
 		
@@ -510,8 +510,9 @@ int main() {
   
 
 
-        if (programState->ImGuiEnabled)
+        if (programState->ImGuiEnabled) {
             DrawImGui(programState);
+}
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -534,17 +535,22 @@ int main() {
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
+}
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         programState->camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+}
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         programState->camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+}
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+}
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -570,8 +576,9 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
     lastX = xpos;
     lastY = ypos;
 
-    if (programState->CameraMouseMovementUpdateEnabled)
+    if (programState->CameraMouseMovementUpdateEnabled) {
         programState->camera.ProcessMouseMovement(xoffset, yoffset);
+}
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
@@ -591,8 +598,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Begin("Hello window");
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
-        ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
+        ImGui::ColorEdit3("Background color", reinterpret_cast<float *>(&programState->clearColor));
+        ImGui::DragFloat3("Backpack position", reinterpret_cast<float*>(&programState->backpackPosition));
         ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.55, 0.1, 1000.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
