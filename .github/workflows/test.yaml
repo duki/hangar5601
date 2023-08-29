@@ -6,9 +6,13 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  print-datetime:
     runs-on: ubuntu-latest
     steps:
-      - name: echo
-        run: echo "Test passed"
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Print Datetime
+        run: echo "Current Datetime: $(date +'%Y-%m-%d %H:%M:%S')"
+
 
