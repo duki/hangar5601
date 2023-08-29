@@ -157,8 +157,6 @@ auto main() -> int
 	// tell GLFW to capture our mouse
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-	// glad: load all OpenGL function pointers
-	// ---------------------------------------
 	if (!gladLoadGLLoader(
 		reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
 		std::cout << "Failed to initialize GLAD" << std::endl;
