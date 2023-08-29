@@ -165,8 +165,6 @@ auto main() -> int
 		return -1;
 	}
 
-	// tell stb_image.h to flip loaded texture's on the y-axis (before
-	// loading model).
 	stbi_set_flip_vertically_on_load(true);
 
 	programState = new ProgramState;
